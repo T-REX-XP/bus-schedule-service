@@ -1,0 +1,22 @@
+name = "emt-valencia-bus-api"
+main = "src/worker.py"
+compatibility_date = "2025-10-28"
+
+# Cloudflare Workers Python runtime
+[python]
+requirements = "app/requirements.txt"
+
+# Environment variables (configure these in Cloudflare Dashboard or use wrangler secret)
+[vars]
+GTFS_URL = "https://opendata.vlci.valencia.es/dataset/google-transit-lines-stops-bus-schedules/resource/c81b69e6-c082-44dc-acc6-66fc417b4e66/download/google_transit.zip"
+TZ = "Europe/Madrid"
+
+# KV namespace for caching GTFS data (optional but recommended)
+# Create KV namespace: wrangler kv:namespace create "GTFS_CACHE"
+# [[kv_namespaces]]
+# binding = "GTFS_CACHE"
+# id = "your-kv-namespace-id"
+
+# Routes configuration
+[routes]
+pattern = "*"
