@@ -1,11 +1,30 @@
-version: "3.9"
 services:
   emt-bus-api:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: emt-bus-api
     ports:
-      - "8000:8000"
+      - "8787:8787"
     environment:
       - TZ=Europe/Madrid
-      - PYTHONUNBUFFERED=1
+      - NODE_ENV=development
+      # GTFS data source URL - customize for different cities/transit systems
+      - GTFS_URL=https://opendata.vlci.valencia.es/dataset/google-transit-lines-stops-bus-schedules/resource/c81b69e6-c082-44dc-acc6-66fc417b4e66/download/google_transit.zip
+    volumes:
+      # Mount source code for hot reload during development
+      - ./src:/app/src:ro
+      - ./wrangler.toml:/app/wrangler.toml:ro
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:8787/').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - emt-network
+
+networks:
+  emt-network:
+    driver: bridge

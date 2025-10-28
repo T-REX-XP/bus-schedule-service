@@ -1,0 +1,26 @@
+{
+  "name": "emt-valencia-bus-api",
+  "version": "1.0.0",
+  "description": "EMT Valencia Bus Schedule API for Cloudflare Workers",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "keywords": [
+    "cloudflare",
+    "workers",
+    "gtfs",
+    "bus",
+    "valencia"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "fflate": "^0.8.2"
+  },
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  }
+}

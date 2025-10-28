@@ -1,5 +1,303 @@
 # 🚍 EMT Valencia Bus Schedule API
 
+A Cloudflare Workers microservice providing upcoming bus departures for EMT Valencia based on GTFS open data.
+
+## ✨ Features
+
+- 🔍 Search for bus stops by name or location (with radius)
+- 🚌 Find bus routes by number or name
+- ⏰ Get upcoming departures for specific routes and stops
+- 📍 Location-based stop search with distance calculation
+- 💾 Automatic GTFS data caching (6 hour TTL)
+- 🌐 CORS-enabled API
+- 📊 GTFS data source status check
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- Node.js 16+ installed
+- Cloudflare account
+- Wrangler CLI installed (`npm install -g wrangler`)
+
+### Installation
+
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd bus-schedule-service
+```
+
+2. Install dependencies:
+```bash
+npm install
+```
+
+3. Login to Cloudflare:
+```bash
+wrangler login
+```
+
+### Development
+
+Run locally with Wrangler:
+```bash
+npm run dev
+# or
+wrangler dev
+```
+
+### Docker Development
+
+You can also run the service using Docker Compose:
+
+```bash
+# Build and start the container
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop the container
+docker-compose down
+```
+
+**Or use the Makefile for convenience:**
+
+```bash
+# Show all available commands
+make help
+
+# Build and start
+make up
+
+# View logs
+make logs
+
+# Restart
+make restart
+
+# Clean up everything
+make clean
+```
+
+The API will be available at `http://localhost:8787`
+
+**Docker Features:**
+- 🐳 Multi-stage build for optimized image size (~100MB)
+- 🔒 Non-root user for security
+- 💚 Health checks
+- 🔥 Hot reload support (source code mounted as volume)
+- 🔄 Automatic restart on failure
+- 🌐 Custom network isolation
+
+**Docker Environment Variables:**
+
+You can customize the Docker setup by creating a `docker-compose.override.yml` file:
+
+```bash
+cp docker-compose.override.yml.example docker-compose.override.yml
+# Edit docker-compose.override.yml as needed
+```
+
+### Deployment
+
+Deploy to Cloudflare Workers:
+```bash
+npm run deploy
+# or
+wrangler deploy
+```
+
+## 📡 API Endpoints
+
+### Root - API Information
+```
+GET /
+```
+Returns API status and available endpoints.
+
+### GTFS Status
+```
+GET /gtfs-status
+```
+Check if the GTFS data source is accessible.
+
+### Find Stop
+```
+GET /find-stop?name={stop_name}&lat={latitude}&lon={longitude}&radius={meters}&limit={count}
+```
+Search for bus stops by name or location.
+
+**Parameters:**
+- `name` (optional): Search term to filter stops by name
+- `lat` (optional): Latitude for location-based search
+- `lon` (optional): Longitude for location-based search
+- `radius` (optional): Search radius in meters (default: 500)
+- `limit` (optional): Maximum results (default: 10)
+
+**Example:**
+```bash
+# By name
+curl "https://your-worker.workers.dev/find-stop?name=plaza"
+
+# By location
+curl "https://your-worker.workers.dev/find-stop?lat=39.4699&lon=-0.3763&radius=500"
+
+# Combined
+curl "https://your-worker.workers.dev/find-stop?name=ayuntamiento&lat=39.4699&lon=-0.3763"
+```
+
+### Find Route
+```
+GET /find-route?number={route_number}&name={route_name}&include_stops={true|false}&limit={count}
+```
+Search for bus routes by number or name.
+
+**Parameters:**
+- `number` (optional): Route number or short name (e.g., "25")
+- `name` (optional): Search term for route long name
+- `include_stops` (optional): Include list of stops (default: false)
+- `limit` (optional): Maximum results (default: 10)
+
+**Example:**
+```bash
+# By number
+curl "https://your-worker.workers.dev/find-route?number=25"
+
+# With stops
+curl "https://your-worker.workers.dev/find-route?number=25&include_stops=true"
+```
+
+### List Routes
+```
+GET /routes?q={search_term}
+```
+List all bus routes, optionally filtered by search term.
+
+**Example:**
+```bash
+curl "https://your-worker.workers.dev/routes?q=25"
+```
+
+### List Stops
+```
+GET /stops?q={search_term}
+```
+List all bus stops, optionally filtered by name.
+
+**Example:**
+```bash
+curl "https://your-worker.workers.dev/stops?q=plaza"
+```
+
+### Get Departures
+```
+GET /departures?route_id={route_id}&stop_id={stop_id}&limit={count}
+```
+Get upcoming departures for a specific route at a specific stop.
+
+**Parameters:**
+- `route_id` (required): Route ID
+- `stop_id` (required): Stop ID
+- `limit` (optional): Number of departures (default: 5)
+
+**Example:**
+```bash
+curl "https://your-worker.workers.dev/departures?route_id=25&stop_id=1234&limit=5"
+```
+
+## 🏗️ Architecture
+
+### Technology Stack
+
+- **Runtime**: Cloudflare Workers (Node.js compatible)
+- **Data Format**: GTFS (General Transit Feed Specification)
+- **Dependencies**:
+  - `fflate`: ZIP file decompression
+
+### Project Structure
+
+```
+bus-schedule-service/
+├── src/
+│   ├── index.js          # Main worker entry point
+│   └── gtfs-utils.js     # GTFS parsing and caching utilities
+├── app/                  # Legacy Python implementation (archived)
+├── package.json          # Node.js dependencies
+├── wrangler.toml         # Cloudflare Workers configuration
+└── README.md             # This file
+```
+
+### Caching Strategy
+
+- GTFS data is cached in memory for 6 hours
+- Cache is automatically refreshed when expired
+- No persistent storage required (uses Worker memory)
+
+## 🔧 Configuration
+
+### Environment Variables
+
+The service uses the following environment variables:
+
+- `GTFS_URL`: URL to the GTFS data source (default: Valencia EMT Open Data Portal)
+- `TZ`: Timezone for the service (default: Europe/Madrid)
+- `NODE_ENV`: Node environment (development/production)
+
+**For local development with Wrangler:**
+
+Edit `wrangler.toml` to configure:
+
+```toml
+name = "emt-valencia-bus-api"
+main = "src/index.js"
+compatibility_date = "2025-10-28"
+node_compat = true
+
+[vars]
+GTFS_URL = "https://opendata.vlci.valencia.es/..."
+TZ = "Europe/Madrid"
+```
+
+**For Docker:**
+
+Environment variables are set in `docker-compose.yml`. You can override them by creating a `docker-compose.override.yml` file or by editing the main compose file.
+
+**Example `.env` file:**
+
+```bash
+cp .env.example .env
+# Edit .env with your values
+```
+
+## 📊 Data Source
+
+This API uses official GTFS data from Valencia's Open Data Portal:
+- **Source**: [opendata.vlci.valencia.es](https://opendata.vlci.valencia.es/)
+- **Dataset**: EMT Valencia - Google Transit (GTFS)
+- **License**: CC-BY 4.0
+- **Update Frequency**: Regular updates from EMT Valencia
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## 📄 License
+
+This project is licensed under the MIT License.
+
+## ⚠️ Disclaimer
+
+This is an unofficial API and is not affiliated with EMT Valencia. Use at your own risk.
+
+## 🔗 Links
+
+- [GTFS Specification](https://gtfs.org/)
+- [Cloudflare Workers Documentation](https://developers.cloudflare.com/workers/)
+- [Valencia Open Data Portal](https://opendata.vlci.valencia.es/)
+
+
 A public microservice providing real-time bus schedule information for EMT Valencia (Spain) based on GTFS open data.
 
 [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/T-REX-XP/bus-schedule-service)

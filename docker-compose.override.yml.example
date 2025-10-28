@@ -1,0 +1,18 @@
+# docker-compose.override.yml
+# This file is automatically merged with docker-compose.yml for local development
+# Add your local customizations here
+
+version: "3.9"
+
+services:
+  emt-bus-api:
+    # Uncomment to expose additional ports
+    # ports:
+    #   - "9229:9229"  # Node.js debugger port
+    
+    # Add custom environment variables for local development
+    # environment:
+    #   - DEBUG=*
+    
+    # Override command for debugging
+    # command: ["npx", "wrangler", "dev", "--port", "8787", "--ip", "0.0.0.0", "--inspector-port", "9229"]
