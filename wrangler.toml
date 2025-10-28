@@ -1,6 +1,7 @@
 name = "emt-valencia-bus-api"
 main = "src/worker.py"
 compatibility_date = "2025-10-28"
+compatibility_flags = ["python_workers"]
 
 # Cloudflare Workers Python runtime
 [python]
