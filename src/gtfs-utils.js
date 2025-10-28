@@ -221,3 +221,48 @@ export async function getUpcomingDepartures(routeId, stopId, afterTime, zipData)
   
   return upcoming;
 }
+
+/**
+ * Get upcoming departures using pre-cached trips data
+ * This version accepts trips as a parameter to use KV-cached data
+ */
+export async function getUpcomingDeparturesWithCachedTrips(routeId, stopId, afterTime, zipData, trips) {
+  // Filter trips for this route
+  const tripIdsForRoute = new Set(
+    trips.filter(t => t.route_id === routeId).map(t => t.trip_id)
+  );
+  
+  if (tripIdsForRoute.size === 0) {
+    return []; // No trips for this route
+  }
+  
+  // Parse stop_times.txt with filtering to only get relevant rows
+  const relevantStopTimes = await parseCSVFromZipFiltered(
+    zipData,
+    'stop_times.txt',
+    (row) => tripIdsForRoute.has(row.trip_id) && row.stop_id === stopId
+  );
+  
+  const upcoming = [];
+  
+  for (const st of relevantStopTimes) {
+    try {
+      let departureTime = parseGTFSTime(st.departure_time, afterTime);
+      
+      // If the departure time is in the past, it might be for the next service day
+      if (departureTime < afterTime) {
+        departureTime = new Date(departureTime.getTime() + 24 * 60 * 60 * 1000);
+      }
+      
+      upcoming.push([departureTime, st]);
+    } catch (error) {
+      // Skip invalid times
+      console.error(`Invalid time format: ${st.departure_time}`, error);
+    }
+  }
+  
+  // Sort by time
+  upcoming.sort((a, b) => a[0] - b[0]);
+  
+  return upcoming;
+}

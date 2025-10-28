@@ -3,7 +3,7 @@
  * Node.js implementation
  */
 
-import { parseCSVFromZip, getCachedZip, getUpcomingDepartures } from './gtfs-utils.js';
+import { parseCSVFromZip, getCachedZip, getUpcomingDepartures, getUpcomingDeparturesWithCachedTrips } from './gtfs-utils.js';
 import { openApiSpec } from './openapi.js';
 import { getSwaggerHTML, getRedocHTML } from './swagger-ui.js';
 import { getCachedRoutes, getCachedStops, getCachedTrips } from './kv-cache.js';
@@ -100,15 +100,7 @@ export default {
       } else if (path === '/find-route') {
         return await handleFindRoute(url.searchParams, GTFS_URL, env.GTFS_CACHE);
       } else if (path === '/departures') {
-        return await handleDepartures(url.searchParams, GTFS_URL);
-      } else if (path === '/stops') {
-        return await handleStops(url.searchParams);
-      } else if (path === '/find-stop') {
-        return await handleFindStop(url.searchParams);
-      } else if (path === '/find-route') {
-        return await handleFindRoute(url.searchParams);
-      } else if (path === '/departures') {
-        return await handleDepartures(url.searchParams);
+        return await handleDepartures(url.searchParams, GTFS_URL, env.GTFS_CACHE);
       }
       
       return jsonResponse({
@@ -526,7 +518,7 @@ async function handleFindRoute(searchParams, GTFS_URL, kvCache) {
 /**
  * Departures endpoint
  */
-async function handleDepartures(searchParams, GTFS_URL) {
+async function handleDepartures(searchParams, GTFS_URL, kvCache) {
   try {
     const routeId = searchParams.get('route_id');
     const stopId = searchParams.get('stop_id');
@@ -537,8 +529,19 @@ async function handleDepartures(searchParams, GTFS_URL) {
     }
     
     const zip = await getCachedZip(GTFS_URL);
+    
+    // Use KV cache for trips data (used by getUpcomingDepartures)
+    // We pass a modified getUpcomingDepartures that uses cached trips
+    const trips = await getCachedTrips(
+      kvCache,
+      GTFS_URL,
+      async () => await parseCSVFromZip(zip, 'trips.txt')
+    );
+    
     const now = new Date();
-    const results = await getUpcomingDepartures(routeId, stopId, now, zip);
+    
+    // Call getUpcomingDepartures with pre-loaded trips
+    const results = await getUpcomingDeparturesWithCachedTrips(routeId, stopId, now, zip, trips);
     
     if (!results || results.length === 0) {
       return jsonResponse({
