@@ -2,7 +2,7 @@
 
 A public microservice providing real-time bus schedule information for EMT Valencia (Spain) based on GTFS open data.
 
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/yourusername/bus-schedule-service)
+[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/T-REX-XP/bus-schedule-service)
 
 ## Features
 
