@@ -2,9 +2,11 @@
  * GTFS utilities for parsing and caching GTFS data
  */
 
-// In-memory cache
+// In-memory cache for parsed GTFS data
 const cache = {
-  data: null,
+  zipData: null,
+  unzipped: null,
+  parsedFiles: new Map(),
   timestamp: 0,
 };
 
@@ -31,13 +33,19 @@ export async function downloadGTFSZip(url) {
  */
 export async function getCachedZip(url) {
   const now = Date.now();
-  if (cache.data && now - cache.timestamp < CACHE_TTL) {
-    return cache.data;
+  if (cache.zipData && cache.unzipped && now - cache.timestamp < CACHE_TTL) {
+    return cache.zipData;
   }
   
   const zipData = await downloadGTFSZip(url);
-  cache.data = zipData;
+  
+  // Unzip once and cache
+  const { unzipSync } = await import('fflate');
+  cache.zipData = zipData;
+  cache.unzipped = unzipSync(zipData);
+  cache.parsedFiles.clear(); // Clear parsed file cache
   cache.timestamp = now;
+  
   return zipData;
 }
 
@@ -45,17 +53,80 @@ export async function getCachedZip(url) {
  * Parse CSV from ZIP file using fflate
  */
 export async function parseCSVFromZip(zipData, filename) {
+  // Check if already parsed and cached
+  if (cache.parsedFiles.has(filename)) {
+    return cache.parsedFiles.get(filename);
+  }
+  
   // Dynamic import of fflate
-  const { unzipSync, strFromU8 } = await import('fflate');
+  const { strFromU8 } = await import('fflate');
   
-  const unzipped = unzipSync(zipData);
+  if (!cache.unzipped) {
+    const { unzipSync } = await import('fflate');
+    cache.unzipped = unzipSync(zipData);
+  }
   
-  if (!unzipped[filename]) {
+  if (!cache.unzipped[filename]) {
     throw new Error(`File ${filename} not found in ZIP`);
   }
   
-  const text = strFromU8(unzipped[filename]);
-  return parseCSV(text);
+  const text = strFromU8(cache.unzipped[filename]);
+  const rows = parseCSV(text);
+  
+  // Cache the parsed file (but not stop_times.txt as it's too large)
+  if (filename !== 'stop_times.txt') {
+    cache.parsedFiles.set(filename, rows);
+  }
+  
+  return rows;
+}
+
+/**
+ * Parse CSV from ZIP file with streaming/filtering for large files
+ */
+export async function parseCSVFromZipFiltered(zipData, filename, filterFn) {
+  const { strFromU8 } = await import('fflate');
+  
+  if (!cache.unzipped) {
+    const { unzipSync } = await import('fflate');
+    cache.unzipped = unzipSync(zipData);
+  }
+  
+  if (!cache.unzipped[filename]) {
+    throw new Error(`File ${filename} not found in ZIP`);
+  }
+  
+  const text = strFromU8(cache.unzipped[filename]);
+  return parseCSVFiltered(text, filterFn);
+}
+
+/**
+ * Parse CSV with filtering to avoid loading entire dataset
+ */
+function parseCSVFiltered(text, filterFn) {
+  const lines = text.split('\n');
+  if (lines.length === 0) return [];
+  
+  const headers = lines[0].split(',').map(h => h.trim());
+  const rows = [];
+  
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    
+    const values = line.split(',').map(v => v.trim());
+    const row = {};
+    headers.forEach((header, index) => {
+      row[header] = values[index] || '';
+    });
+    
+    // Apply filter immediately to avoid storing unnecessary data
+    if (filterFn(row)) {
+      rows.push(row);
+    }
+  }
+  
+  return rows;
 }
 
 /**
@@ -107,20 +178,30 @@ export function parseGTFSTime(timeStr, baseDate) {
 
 /**
  * Get upcoming departures for a route at a stop
+ * Optimized to avoid loading entire stop_times.txt into memory
  */
 export async function getUpcomingDepartures(routeId, stopId, afterTime, zipData) {
-  const stopTimes = await parseCSVFromZip(zipData, 'stop_times.txt');
+  // First, get the trip IDs for this route (smaller dataset)
   const trips = await parseCSVFromZip(zipData, 'trips.txt');
-  
-  // Get trip IDs for this route
   const tripIdsForRoute = new Set(
     trips.filter(t => t.route_id === routeId).map(t => t.trip_id)
   );
   
+  if (tripIdsForRoute.size === 0) {
+    return []; // No trips for this route
+  }
+  
+  // Parse stop_times.txt with filtering to only get relevant rows
+  const relevantStopTimes = await parseCSVFromZipFiltered(
+    zipData,
+    'stop_times.txt',
+    (row) => tripIdsForRoute.has(row.trip_id) && row.stop_id === stopId
+  );
+  
   const upcoming = [];
   
-  for (const st of stopTimes) {
-    if (tripIdsForRoute.has(st.trip_id) && st.stop_id === stopId) {
+  for (const st of relevantStopTimes) {
+    try {
       let departureTime = parseGTFSTime(st.departure_time, afterTime);
       
       // If the departure time is in the past, it might be for the next service day
@@ -129,6 +210,9 @@ export async function getUpcomingDepartures(routeId, stopId, afterTime, zipData)
       }
       
       upcoming.push([departureTime, st]);
+    } catch (error) {
+      // Skip invalid times
+      console.error(`Invalid time format: ${st.departure_time}`, error);
     }
   }
   

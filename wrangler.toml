@@ -3,12 +3,19 @@ main = "src/index.js"
 compatibility_date = "2025-10-28"
 compatibility_flags = ["nodejs_compat"]
 
+# Limits - adjust based on your Cloudflare plan
+# Free plan: 10ms CPU time, Paid: 30s CPU time
+# These are configured automatically based on your account
+# [limits]
+# cpu_ms = 10  # CPU time limit in milliseconds (Free tier)
+
 # Environment variables
 [vars]
 GTFS_URL = "https://opendata.vlci.valencia.es/dataset/google-transit-lines-stops-bus-schedules/resource/c81b69e6-c082-44dc-acc6-66fc417b4e66/download/google_transit.zip"
 TZ = "Europe/Madrid"
 
-# KV namespace for caching GTFS data (optional but recommended)
+# KV namespace for caching GTFS data (recommended for better performance)
+# This will cache parsed GTFS files to reduce processing time
 # Create KV namespace: wrangler kv:namespace create "GTFS_CACHE"
 # [[kv_namespaces]]
 # binding = "GTFS_CACHE"

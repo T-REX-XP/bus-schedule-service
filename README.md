@@ -241,9 +241,26 @@ bus-schedule-service/
 
 ### Caching Strategy
 
-- GTFS data is cached in memory for 6 hours
+- GTFS ZIP file is cached in memory for 6 hours
+- Unzipped files are cached to avoid repeated decompression
+- Parsed CSV files (except stop_times.txt) are cached to reduce parsing overhead
+- stop_times.txt is parsed with filtering to avoid loading the entire file into memory
 - Cache is automatically refreshed when expired
 - No persistent storage required (uses Worker memory)
+
+### Performance Optimizations
+
+The service is optimized to handle large GTFS datasets efficiently:
+
+1. **Filtered Parsing**: Large files like `stop_times.txt` are parsed with filtering to only load relevant data
+2. **Smart Caching**: Smaller files (routes, stops, trips) are cached after first parse
+3. **Lazy Loading**: Files are only parsed when needed
+4. **Memory Efficient**: Filters data during parsing rather than loading everything into memory
+
+**Note**: If you encounter "Worker exceeded resource limits" errors on Cloudflare's free tier, consider:
+- Using KV storage for caching (see `wrangler.toml`)
+- Upgrading to a paid Workers plan for higher CPU limits
+- Implementing pagination for large result sets
 
 ## 🔧 Configuration
 
