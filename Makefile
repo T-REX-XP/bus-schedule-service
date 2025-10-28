@@ -12,6 +12,7 @@ help:
 	@echo "  make logs     - View container logs"
 	@echo "  make restart  - Restart services"
 	@echo "  make clean    - Stop containers and remove volumes"
+	@echo "  make docs     - Open API documentation in browser"
 	@echo ""
 	@echo "Development commands:"
 	@echo "  make install  - Install Node.js dependencies"
@@ -55,3 +56,8 @@ rebuild: down build up
 # Check status
 status:
 	docker-compose ps
+
+# Open API documentation
+docs:
+	@echo "Opening API documentation..."
+	@start http://localhost:8787/docs

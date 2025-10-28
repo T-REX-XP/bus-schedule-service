@@ -4,6 +4,8 @@
  */
 
 import { parseCSVFromZip, getCachedZip, getUpcomingDepartures } from './gtfs-utils.js';
+import { openApiSpec } from './openapi.js';
+import { getSwaggerHTML, getRedocHTML } from './swagger-ui.js';
 
 /**
  * Get GTFS URL from environment variable or use default
@@ -80,6 +82,12 @@ export default {
       // Routes
       if (path === '/' || path === '') {
         return handleRoot();
+      } else if (path === '/openapi.json') {
+        return handleOpenAPISpec(url);
+      } else if (path === '/docs' || path === '/swagger') {
+        return handleSwaggerUI(url);
+      } else if (path === '/redoc') {
+        return handleRedoc(url);
       } else if (path === '/gtfs-status') {
         return await handleGTFSStatus(GTFS_URL);
       } else if (path === '/routes') {
@@ -123,6 +131,11 @@ function handleRoot() {
     status: 'running',
     service: 'EMT Valencia Bus Schedule API',
     version: '1.0.0',
+    documentation: {
+      swagger: '/docs',
+      redoc: '/redoc',
+      openapi_spec: '/openapi.json',
+    },
     endpoints: {
       find_stop: '/find-stop?name={stop_name}',
       find_route: '/find-route?name={route_name}',
@@ -130,6 +143,54 @@ function handleRoot() {
       routes: '/routes?q={search_term}',
       departures: '/departures?route_id={route_id}&stop_id={stop_id}&limit={limit}',
       gtfs_status: '/gtfs-status',
+    },
+  });
+}
+
+/**
+ * OpenAPI specification endpoint
+ */
+function handleOpenAPISpec(url) {
+  // Update server URL in spec to match current request
+  const spec = { ...openApiSpec };
+  spec.servers = [
+    {
+      url: `${url.protocol}//${url.host}`,
+      description: 'Current server',
+    },
+  ];
+  
+  return new Response(JSON.stringify(spec, null, 2), {
+    status: 200,
+    headers: {
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*',
+    },
+  });
+}
+
+/**
+ * Swagger UI endpoint
+ */
+function handleSwaggerUI(url) {
+  const specUrl = `${url.protocol}//${url.host}/openapi.json`;
+  return new Response(getSwaggerHTML(specUrl), {
+    status: 200,
+    headers: {
+      'Content-Type': 'text/html',
+    },
+  });
+}
+
+/**
+ * Redoc endpoint
+ */
+function handleRedoc(url) {
+  const specUrl = `${url.protocol}//${url.host}/openapi.json`;
+  return new Response(getRedocHTML(specUrl), {
+    status: 200,
+    headers: {
+      'Content-Type': 'text/html',
     },
   });
 }

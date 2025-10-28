@@ -47,6 +47,8 @@ npm run dev
 wrangler dev
 ```
 
+The server will start at `http://localhost:8787`. Visit `http://localhost:8787/docs` for interactive API documentation.
+
 ### Docker Development
 
 You can also run the service using Docker Compose:
@@ -110,6 +112,14 @@ wrangler deploy
 ```
 
 ## 📡 API Endpoints
+
+### 📚 Interactive Documentation
+
+The API includes interactive documentation powered by Swagger/OpenAPI:
+
+- **Swagger UI**: [http://localhost:8787/docs](http://localhost:8787/docs) - Interactive API explorer with try-it-out functionality
+- **ReDoc**: [http://localhost:8787/redoc](http://localhost:8787/redoc) - Clean, responsive API documentation
+- **OpenAPI Spec**: [http://localhost:8787/openapi.json](http://localhost:8787/openapi.json) - Machine-readable API specification
 
 ### Root - API Information
 ```
