@@ -6,6 +6,7 @@
 import { parseCSVFromZip, getCachedZip, getUpcomingDepartures } from './gtfs-utils.js';
 import { openApiSpec } from './openapi.js';
 import { getSwaggerHTML, getRedocHTML } from './swagger-ui.js';
+import { getCachedRoutes, getCachedStops, getCachedTrips } from './kv-cache.js';
 
 /**
  * Get GTFS URL from environment variable or use default
@@ -91,13 +92,13 @@ export default {
       } else if (path === '/gtfs-status') {
         return await handleGTFSStatus(GTFS_URL);
       } else if (path === '/routes') {
-        return await handleRoutes(url.searchParams, GTFS_URL);
+        return await handleRoutes(url.searchParams, GTFS_URL, env.GTFS_CACHE);
       } else if (path === '/stops') {
-        return await handleStops(url.searchParams, GTFS_URL);
+        return await handleStops(url.searchParams, GTFS_URL, env.GTFS_CACHE);
       } else if (path === '/find-stop') {
-        return await handleFindStop(url.searchParams, GTFS_URL);
+        return await handleFindStop(url.searchParams, GTFS_URL, env.GTFS_CACHE);
       } else if (path === '/find-route') {
-        return await handleFindRoute(url.searchParams, GTFS_URL);
+        return await handleFindRoute(url.searchParams, GTFS_URL, env.GTFS_CACHE);
       } else if (path === '/departures') {
         return await handleDepartures(url.searchParams, GTFS_URL);
       } else if (path === '/stops') {
@@ -229,11 +230,17 @@ async function handleGTFSStatus(GTFS_URL) {
 /**
  * List routes endpoint
  */
-async function handleRoutes(searchParams, GTFS_URL) {
+async function handleRoutes(searchParams, GTFS_URL, kvCache) {
   try {
     const q = searchParams.get('q') || '';
     const zip = await getCachedZip(GTFS_URL);
-    let routes = await parseCSVFromZip(zip, 'routes.txt');
+    
+    // Use KV cache for routes
+    let routes = await getCachedRoutes(
+      kvCache,
+      GTFS_URL,
+      async () => await parseCSVFromZip(zip, 'routes.txt')
+    );
     
     // Filter if query provided
     if (q) {
@@ -275,11 +282,17 @@ async function handleRoutes(searchParams, GTFS_URL) {
 /**
  * List stops endpoint
  */
-async function handleStops(searchParams, GTFS_URL) {
+async function handleStops(searchParams, GTFS_URL, kvCache) {
   try {
     const q = searchParams.get('q') || '';
     const zip = await getCachedZip(GTFS_URL);
-    let stops = await parseCSVFromZip(zip, 'stops.txt');
+    
+    // Use KV cache for stops
+    let stops = await getCachedStops(
+      kvCache,
+      GTFS_URL,
+      async () => await parseCSVFromZip(zip, 'stops.txt')
+    );
     
     // Filter if query provided
     if (q) {
@@ -307,7 +320,7 @@ async function handleStops(searchParams, GTFS_URL) {
 /**
  * Find stop endpoint
  */
-async function handleFindStop(searchParams, GTFS_URL) {
+async function handleFindStop(searchParams, GTFS_URL, kvCache) {
   try {
     const name = searchParams.get('name');
     const lat = parseFloat(searchParams.get('lat'));
@@ -316,7 +329,13 @@ async function handleFindStop(searchParams, GTFS_URL) {
     const limit = parseInt(searchParams.get('limit') || '10');
     
     const zip = await getCachedZip(GTFS_URL);
-    let stops = await parseCSVFromZip(zip, 'stops.txt');
+    
+    // Use KV cache for stops
+    let stops = await getCachedStops(
+      kvCache,
+      GTFS_URL,
+      async () => await parseCSVFromZip(zip, 'stops.txt')
+    );
     
     // Filter by name
     if (name) {
@@ -383,7 +402,7 @@ async function handleFindStop(searchParams, GTFS_URL) {
 /**
  * Find route endpoint
  */
-async function handleFindRoute(searchParams, GTFS_URL) {
+async function handleFindRoute(searchParams, GTFS_URL, kvCache) {
   try {
     const number = searchParams.get('number');
     const name = searchParams.get('name');
@@ -391,7 +410,13 @@ async function handleFindRoute(searchParams, GTFS_URL) {
     const limit = parseInt(searchParams.get('limit') || '10');
     
     const zip = await getCachedZip(GTFS_URL);
-    let routes = await parseCSVFromZip(zip, 'routes.txt');
+    
+    // Use KV cache for routes
+    let routes = await getCachedRoutes(
+      kvCache,
+      GTFS_URL,
+      async () => await parseCSVFromZip(zip, 'routes.txt')
+    );
     
     // Filter by number
     if (number) {
@@ -436,8 +461,12 @@ async function handleFindRoute(searchParams, GTFS_URL) {
       };
       
       if (includeStops) {
-        // Get trips for this route
-        const trips = await parseCSVFromZip(zip, 'trips.txt');
+        // Get trips for this route - Use KV cache for trips
+        const trips = await getCachedTrips(
+          kvCache,
+          GTFS_URL,
+          async () => await parseCSVFromZip(zip, 'trips.txt')
+        );
         const routeTrips = trips.filter(t => t.route_id === r.route_id);
         
         if (routeTrips.length > 0) {
@@ -450,8 +479,12 @@ async function handleFindRoute(searchParams, GTFS_URL) {
             parseInt(a.stop_sequence || 0) - parseInt(b.stop_sequence || 0)
           );
           
-          // Get stop details
-          const stops = await parseCSVFromZip(zip, 'stops.txt');
+          // Get stop details - Use KV cache for stops
+          const stops = await getCachedStops(
+            kvCache,
+            GTFS_URL,
+            async () => await parseCSVFromZip(zip, 'stops.txt')
+          );
           const stopsDict = {};
           stops.forEach(s => {
             stopsDict[s.stop_id] = s;

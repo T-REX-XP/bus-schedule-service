@@ -14,21 +14,12 @@ compatibility_flags = ["nodejs_compat"]
 GTFS_URL = "https://opendata.vlci.valencia.es/dataset/google-transit-lines-stops-bus-schedules/resource/c81b69e6-c082-44dc-acc6-66fc417b4e66/download/google_transit.zip"
 TZ = "Europe/Madrid"
 
-# KV namespace for caching GTFS data (RECOMMENDED for free tier!)
+# KV namespace for caching GTFS data (CONFIGURED)
 # This dramatically reduces CPU time and improves response times
-# 
-# Setup instructions:
-# 1. Create KV namespace:
-#    wrangler kv:namespace create "GTFS_CACHE"
-#
-# 2. For preview/dev:
-#    wrangler kv:namespace create "GTFS_CACHE" --preview
-#
-# 3. Copy the IDs from output and uncomment below:
-#
 [[kv_namespaces]]
 binding = "GTFS_CACHE"
 id = "ba01ae4309d343059f70318844f2f1a9"
+# preview_id = "YOUR_PREVIEW_KV_ID_HERE"  # Create with: wrangler kv:namespace create "GTFS_CACHE" --preview
 #
 # Free tier limits:
 # - 100,000 reads/day

@@ -13,6 +13,8 @@ const HOST = process.env.HOST || '0.0.0.0';
 const env = {
   GTFS_URL: process.env.GTFS_URL,
   TZ: process.env.TZ,
+  // Mock KV namespace for local development (no-op)
+  GTFS_CACHE: null, // KV is not available in local Docker, will fallback to parsing
 };
 
 const server = createServer(async (req, res) => {
