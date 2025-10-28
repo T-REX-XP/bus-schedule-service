@@ -3,7 +3,7 @@
  * Node.js implementation
  */
 
-import { parseCSVFromZip, getCachedZip, getUpcomingDepartures } from './gtfs-utils';
+import { parseCSVFromZip, getCachedZip, getUpcomingDepartures } from './gtfs-utils.js';
 
 /**
  * Get GTFS URL from environment variable or use default

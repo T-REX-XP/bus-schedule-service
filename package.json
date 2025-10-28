@@ -6,7 +6,9 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy"
+    "deploy": "wrangler deploy",
+    "start": "node src/server.js",
+    "docker:dev": "node src/server.js"
   },
   "keywords": [
     "cloudflare",
