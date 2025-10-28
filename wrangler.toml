@@ -26,10 +26,9 @@ TZ = "Europe/Madrid"
 #
 # 3. Copy the IDs from output and uncomment below:
 #
-# [[kv_namespaces]]
-# binding = "GTFS_CACHE"
-# id = "your-kv-namespace-id-here"
-# preview_id = "your-preview-kv-namespace-id-here"
+[[kv_namespaces]]
+binding = "GTFS_CACHE"
+preview_id = "fe1c9f9870a5437e868404721cddc642"
 #
 # Free tier limits:
 # - 100,000 reads/day
