@@ -91,6 +91,8 @@ export default {
         return handleRedoc(url);
       } else if (path === '/gtfs-status') {
         return await handleGTFSStatus(GTFS_URL);
+      } else if (path === '/kv-status') {
+        return await handleKVStatus(env.GTFS_CACHE, GTFS_URL);
       } else if (path === '/routes') {
         return await handleRoutes(url.searchParams, GTFS_URL, env.GTFS_CACHE);
       } else if (path === '/stops') {
@@ -136,6 +138,7 @@ function handleRoot() {
       routes: '/routes?q={search_term}',
       departures: '/departures?route_id={route_id}&stop_id={stop_id}&limit={limit}',
       gtfs_status: '/gtfs-status',
+      kv_status: '/kv-status',
     },
   });
 }
@@ -216,6 +219,78 @@ async function handleGTFSStatus(GTFS_URL) {
       error: error.message,
       message: 'Failed to connect to GTFS data source',
     });
+  }
+}
+
+/**
+ * KV Cache Status endpoint (Debug)
+ */
+async function handleKVStatus(kvCache, GTFS_URL) {
+  try {
+    if (!kvCache) {
+      return jsonResponse({
+        status: 'unavailable',
+        message: 'KV namespace not bound (running in local Docker mode)',
+        kv_available: false,
+      });
+    }
+
+    // Import the hash function from kv-cache
+    const hashUrl = (url) => {
+      let hash = 0;
+      for (let i = 0; i < url.length; i++) {
+        const char = url.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash;
+      }
+      return Math.abs(hash).toString(36);
+    };
+
+    const urlHash = hashUrl(GTFS_URL);
+    const keys = [
+      `gtfs:routes:${urlHash}`,
+      `gtfs:stops:${urlHash}`,
+      `gtfs:trips:${urlHash}`,
+    ];
+
+    const results = {};
+    for (const key of keys) {
+      try {
+        const value = await kvCache.get(key);
+        if (value) {
+          const parsed = JSON.parse(value);
+          results[key] = {
+            exists: true,
+            size_bytes: value.length,
+            size_kb: Math.round(value.length / 1024 * 10) / 10,
+            records: Array.isArray(parsed) ? parsed.length : 'N/A',
+          };
+        } else {
+          results[key] = {
+            exists: false,
+            message: 'Not cached yet - make a request to populate',
+          };
+        }
+      } catch (error) {
+        results[key] = {
+          exists: false,
+          error: error.message,
+        };
+      }
+    }
+
+    return jsonResponse({
+      status: 'available',
+      kv_available: true,
+      gtfs_url_hash: urlHash,
+      cache_keys: results,
+      total_cached_keys: Object.values(results).filter(r => r.exists).length,
+      message: Object.values(results).every(r => r.exists) 
+        ? 'All GTFS data cached in KV' 
+        : 'Some data not cached yet - make requests to populate',
+    });
+  } catch (error) {
+    return errorResponse(`KV status check failed: ${error.message}`, 500);
   }
 }
 

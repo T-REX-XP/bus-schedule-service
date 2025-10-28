@@ -11,6 +11,7 @@ const KV_CACHE_TTL = 6 * 60 * 60; // 6 hours in seconds
 export async function getFromKVOrParse(kv, key, parseFn, ttl = KV_CACHE_TTL) {
   if (!kv) {
     // No KV available, use parse function directly
+    console.log(`KV not available, parsing directly`);
     return await parseFn();
   }
 
@@ -18,21 +19,28 @@ export async function getFromKVOrParse(kv, key, parseFn, ttl = KV_CACHE_TTL) {
     // Try to get from KV first
     const cached = await kv.get(key, { type: 'json' });
     if (cached) {
-      console.log(`KV cache hit: ${key}`);
+      console.log(`✅ KV cache HIT: ${key}`);
       return cached;
     }
   } catch (error) {
-    console.error(`KV read error for ${key}:`, error);
+    console.error(`❌ KV read error for ${key}:`, error);
   }
 
   // Cache miss or error - parse and store
-  console.log(`KV cache miss: ${key}`);
+  console.log(`⚠️  KV cache MISS: ${key} - will populate cache`);
   const data = await parseFn();
   
-  // Store in KV for next time (async, don't wait)
+  // Store in KV for next time - AWAIT the write to ensure it completes
   if (kv && data) {
-    kv.put(key, JSON.stringify(data), { expirationTtl: ttl })
-      .catch(err => console.error(`KV write error for ${key}:`, err));
+    try {
+      console.log(`📝 Writing to KV: ${key} (${JSON.stringify(data).length} bytes)`);
+      await kv.put(key, JSON.stringify(data), { expirationTtl: ttl });
+      console.log(`✅ KV write SUCCESS: ${key}`);
+    } catch (err) {
+      console.error(`❌ KV write ERROR for ${key}:`, err);
+    }
+  } else {
+    console.log(`⚠️  Skipping KV write: kv=${!!kv}, data=${!!data}`);
   }
   
   return data;
