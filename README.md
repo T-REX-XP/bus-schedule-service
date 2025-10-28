@@ -11,6 +11,21 @@ A Cloudflare Workers microservice providing upcoming bus departures for EMT Vale
 - 💾 Automatic GTFS data caching (6 hour TTL)
 - 🌐 CORS-enabled API
 - 📊 GTFS data source status check
+- 📚 Interactive Swagger/OpenAPI documentation
+- ⚡ Optimized for Cloudflare Workers free tier
+
+## 🚀 Cloudflare Services Support
+
+This API is optimized to run on Cloudflare's **free tier** with optional services for better performance:
+
+| Service | Status | Purpose | Free Tier |
+|---------|--------|---------|-----------|
+| **Workers** | ✅ Required | Run the API | 100k req/day |
+| **KV Storage** | 🎯 Recommended | Cache parsed data | 100k reads/day |
+| **R2 Storage** | ⭐ Optional | Pre-processed GTFS | 10GB storage |
+| **Cron Triggers** | ⭐ Optional | Auto-update data | Unlimited |
+
+**📖 See [Services Comparison](SERVICES_COMPARISON.md) for detailed guidance**
 
 ## 🚀 Quick Start
 
@@ -110,6 +125,16 @@ npm run deploy
 # or
 wrangler deploy
 ```
+
+**📚 Deployment Guides:**
+- [Cloudflare Setup Guide](CLOUDFLARE_SETUP.md) - Step-by-step deployment instructions
+- [Free Tier Optimization](CLOUDFLARE_OPTIMIZATION.md) - Optimize for Cloudflare's free tier
+- [Performance Guide](PERFORMANCE.md) - Technical details on optimizations
+
+**Recommended for Production:**
+1. Enable KV caching (see [CLOUDFLARE_SETUP.md](CLOUDFLARE_SETUP.md))
+2. Consider R2 storage for pre-processed data
+3. Set up Cron triggers for automatic updates
 
 ## 📡 API Endpoints
 
