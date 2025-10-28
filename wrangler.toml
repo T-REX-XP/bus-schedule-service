@@ -1,4 +1,4 @@
-name = "emt-valencia-bus-api"
+name = "bus-schedule-service"
 main = "src/index.js"
 compatibility_date = "2025-10-28"
 compatibility_flags = ["nodejs_compat"]
