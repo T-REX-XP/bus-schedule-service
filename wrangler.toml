@@ -28,7 +28,7 @@ TZ = "Europe/Madrid"
 #
 [[kv_namespaces]]
 binding = "GTFS_CACHE"
-preview_id = "fe1c9f9870a5437e868404721cddc642"
+id = "ba01ae4309d343059f70318844f2f1a9"
 #
 # Free tier limits:
 # - 100,000 reads/day
